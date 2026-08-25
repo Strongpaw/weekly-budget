@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="brand">#2E7D32</color>
+    <color name="brand_container">#A5D6A7</color>
+    <color name="on_brand_container">#0A2E12</color>
+    <color name="income_green">#43A047</color>
+    <color name="expense_red">#E53935</color>
+    <color name="cap_warn">#FB8C00</color>
+    <color name="widget_bg">#FFFFFF</color>
+    <color name="widget_text">#1A1C19</color>
+    <color name="widget_text_secondary">#6F6F6F</color>
+    <color name="ic_launcher_bg">#2E7D32</color>
+</resources>
