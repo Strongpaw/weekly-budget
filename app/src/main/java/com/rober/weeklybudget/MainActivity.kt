@@ -139,6 +139,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<FloatingActionButton>(R.id.fabAdd).setOnClickListener { showEditDialog(null) }
 
         reload()
+        UpdateChecker.checkAsync(this)
 
         if (savedInstanceState == null &&
             intent?.getBooleanExtra(BudgetWidget.EXTRA_START_LISTENING, false) == true

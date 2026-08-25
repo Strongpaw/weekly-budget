@@ -1,0 +1,6 @@
+{
+  "versionCode": 7,
+  "versionName": "1.6",
+  "apk": "https://github.com/Strongpaw/weekly-budget/releases/latest/download/WeeklyBudget.apk",
+  "notes": "Adds the in-app auto-updater. Also includes styled Excel export, bank CSV import, learning categorizer, custom categories, search, weekly cap, and the home screen widget."
+}

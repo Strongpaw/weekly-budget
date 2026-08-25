@@ -73,4 +73,8 @@
     <string name="import_flip">Positive amounts are purchases (credit-card style)</string>
     <string name="import_button">Import</string>
     <string name="import_done">Imported %1$d · skipped %2$d duplicates</string>
+    <string name="update_title">Update available: v%1$s</string>
+    <string name="update_msg">A new version is ready to download.</string>
+    <string name="update_now">Update</string>
+    <string name="update_later">Later</string>
 </resources>
