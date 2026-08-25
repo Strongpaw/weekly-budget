@@ -41,6 +41,9 @@ import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToLong
 
+private const val XLSX_MIME =
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
 class MainActivity : AppCompatActivity() {
 
     private lateinit var db: Db
@@ -312,22 +315,34 @@ class MainActivity : AppCompatActivity() {
     // ---- export ----
 
     private fun exportBudget() {
-        val options = mutableListOf(getString(R.string.export_share))
-        if (Build.VERSION.SDK_INT >= 29) options.add(0, getString(R.string.export_download))
-        options.add(getString(R.string.import_bank))
+        val items = mutableListOf<Pair<String, () -> Unit>>()
+        if (Build.VERSION.SDK_INT >= 29) {
+            items.add(getString(R.string.export_xlsx_download) to { exportXlsx(toDownloads = true) })
+            items.add(getString(R.string.export_download) to { exportCsvFile(toDownloads = true) })
+            items.add(getString(R.string.export_xlsx_share) to { exportXlsx(toDownloads = false) })
+        } else {
+            items.add(getString(R.string.export_xlsx_share) to { exportXlsx(toDownloads = false) })
+            items.add(getString(R.string.export_share) to { exportCsvFile(toDownloads = false) })
+        }
+        items.add(getString(R.string.import_bank) to { importLauncher.launch("*/*") })
         AlertDialog.Builder(this)
             .setTitle(R.string.export_import_title)
-            .setItems(options.toTypedArray()) { _, which ->
-                when (options[which]) {
-                    getString(R.string.export_download) -> doExport(toDownloads = true)
-                    getString(R.string.export_share) -> doExport(toDownloads = false)
-                    else -> importLauncher.launch("*/*")
-                }
-            }
+            .setItems(items.map { it.first }.toTypedArray()) { _, which -> items[which].second() }
             .show()
     }
 
-    private fun doExport(toDownloads: Boolean) {
+    private fun exportXlsx(toDownloads: Boolean) {
+        val all = db.listAll()
+        if (all.isEmpty()) {
+            Toast.makeText(this, R.string.export_empty, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val bytes = Xlsx.build(all) { d -> startOfWeek(d) }
+        val name = "WeeklyBudget-${LocalDate.now()}.xlsx"
+        if (toDownloads) saveToDownloads(bytes, name, XLSX_MIME) else shareFile(bytes, name, XLSX_MIME)
+    }
+
+    private fun exportCsvFile(toDownloads: Boolean) {
         val all = db.listAll()
         if (all.isEmpty()) {
             Toast.makeText(this, R.string.export_empty, Toast.LENGTH_SHORT).show()
@@ -343,9 +358,9 @@ class MainActivity : AppCompatActivity() {
                 .append(csvField(t.merchant)).append(',')
                 .append(csvField(t.category)).append('\n')
         }
-        val csv = sb.toString()
+        val bytes = sb.toString().toByteArray()
         val name = "WeeklyBudget-${LocalDate.now()}.csv"
-        if (toDownloads) saveToDownloads(csv, name) else shareCsv(csv, name)
+        if (toDownloads) saveToDownloads(bytes, name, "text/csv") else shareFile(bytes, name, "text/csv")
     }
 
     private fun csvField(s: String): String =
@@ -353,16 +368,16 @@ class MainActivity : AppCompatActivity() {
             "\"" + s.replace("\"", "\"\"") + "\""
         } else s
 
-    private fun saveToDownloads(csv: String, name: String) {
+    private fun saveToDownloads(bytes: ByteArray, name: String, mime: String) {
         try {
             val values = ContentValues().apply {
                 put(MediaStore.MediaColumns.DISPLAY_NAME, name)
-                put(MediaStore.MediaColumns.MIME_TYPE, "text/csv")
+                put(MediaStore.MediaColumns.MIME_TYPE, mime)
                 put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
             }
             val uri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
                 ?: throw IllegalStateException("MediaStore insert failed")
-            contentResolver.openOutputStream(uri)?.use { it.write(csv.toByteArray()) }
+            contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
                 ?: throw IllegalStateException("openOutputStream failed")
             Toast.makeText(this, getString(R.string.export_saved, name), Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
@@ -370,14 +385,14 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun shareCsv(csv: String, name: String) {
+    private fun shareFile(bytes: ByteArray, name: String, mime: String) {
         try {
             val dir = File(cacheDir, "export").apply { mkdirs() }
             val f = File(dir, name)
-            f.writeText(csv)
+            f.writeBytes(bytes)
             val uri = FileProvider.getUriForFile(this, "com.rober.weeklybudget.fileprovider", f)
             val send = Intent(Intent.ACTION_SEND).apply {
-                type = "text/csv"
+                type = mime
                 putExtra(Intent.EXTRA_STREAM, uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
